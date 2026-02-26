@@ -20,12 +20,10 @@ namespace GestorGastos.API.Controllers
             var todosLosGastos = _context.Gastos.ToList();
             return Ok(todosLosGastos);
         }
-        // Leer filtrado por Categoría (¡Usando LINQ!)
-        // Le agregamos una ruta extra para que no choque con el GET normal
+        // Leer filtrado por Categoría 
         [HttpGet("categoria/{nombreCategoria}")]
         public IActionResult ObtenerPorCategoria(string nombreCategoria)
         {
-            // La flecha "=>" se lee como "donde cada gasto (g) cumpla esta condición"
             var gastosFiltrados = _context.Gastos
                                           .Where(g => g.Categoria == nombreCategoria)
                                           .ToList();
@@ -37,6 +35,19 @@ namespace GestorGastos.API.Controllers
             }
 
             return Ok(gastosFiltrados);
+        }
+        // Calcular el Balance Total 
+        [HttpGet("total")]
+        public IActionResult ObtenerTotal()
+        {
+            // viaja a la base de datos y suma automáticamente la columna 'Monto'
+            var sumaTotal = _context.Gastos.Sum(g => g.Monto);
+
+            return Ok(new
+            {
+                Mensaje = "Cálculo de balance exitoso",
+                Total = sumaTotal
+            });
         }
         // Crear 
         [HttpPost]

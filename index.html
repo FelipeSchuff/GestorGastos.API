@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Mi Gestor de Gastos</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f9; }
+        .contenedor { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
+        button { background-color: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; margin-top: 10px; width: 100%; }
+        button:hover { background-color: #0056b3; }
+        .btn-verde { background-color: #28a745; }
+        .btn-verde:hover { background-color: #218838; }
+        input { width: 95%; padding: 8px; margin-top: 5px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; }
+        li { margin-bottom: 10px; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .formulario { background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="contenedor">
+        <h1>💸 Mi Gestor de Gastos</h1>
+        <h2 style="color: #d9534f;">Total Gastado: $<span id="balance">0</span></h2>
+        <div class="formulario">
+            <h3>Agregar Nuevo Gasto</h3>
+            <label>Descripción:</label>
+            <input type="text" id="desc" placeholder="Ej: Compra en Steam">
+            
+            <label>Monto:</label>
+            <input type="number" id="monto" placeholder="Ej: 8500">
+            
+            <label>Categoría:</label>
+            <input type="text" id="cat" placeholder="Ej: Entretenimiento">
+            
+            <button class="btn-verde" onclick="guardarGasto()">Guardar Gasto</button>
+        </div>
+
+        <button onclick="obtenerDatos()">Cargar mi Historial</button>
+        <ul id="lista-gastos"></ul>
+    </div>
+
+    <script>
+        // Leer (GET)
+        function obtenerDatos() {
+            fetch('https://localhost:7041/api/Gastos')
+                .then(respuesta => respuesta.json())
+                .then(datos => {
+                    const lista = document.getElementById('lista-gastos');
+                    lista.innerHTML = ''; 
+                    datos.forEach(gasto => {
+                        lista.innerHTML += `<li><strong>${gasto.descripcion}</strong>: $${gasto.monto} <br><small>Categoría: ${gasto.categoria}</small></li>`;
+                    });
+                    
+                    cargarTotal(); 
+                })
+                .catch(error => alert("Error conectando con la API. ¿Está encendido Visual Studio?"));
+        }
+
+        // La Calculadora
+        function cargarTotal() {
+            fetch('https://localhost:7041/api/Gastos/total')
+                .then(respuesta => respuesta.json())
+                .then(datos => {
+                    // Buscamos el letrero y le inyectamos el numero del total
+                    document.getElementById('balance').innerText = datos.total;
+                })
+                .catch(error => console.log("Error cargando el total"));
+        }
+
+        // Crear (POST) 
+        function guardarGasto() {
+            // Entrada de datos
+            const descripcion = document.getElementById('desc').value;
+            const monto = document.getElementById('monto').value;
+            const categoria = document.getElementById('cat').value;
+
+            // Armamos el paquete JSON
+            const nuevoGasto = {
+                descripcion: descripcion,
+                monto: parseFloat(monto),
+                categoria: categoria
+            };
+
+            // Lo enviamos por internet 
+            fetch('https://localhost:7041/api/Gastos', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify(nuevoGasto) 
+            })
+            .then(respuesta => {
+                if(respuesta.ok) {
+                    alert("¡Gasto guardado con éxito en la base de datos!");
+                    document.getElementById('desc').value = '';
+                    document.getElementById('monto').value = '';
+                    document.getElementById('cat').value = '';
+                    
+                    obtenerDatos(); 
+                } else {
+                    alert("Hubo un error al guardar.");
+                }
+            });
+        }
+    </script>
+
+</body>
+</html>
