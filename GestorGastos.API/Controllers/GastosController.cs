@@ -54,9 +54,6 @@ namespace GestorGastos.API.Controllers
         public IActionResult CrearGasto([FromBody] Gasto nuevoGasto)
         {
             
-            nuevoGasto.Fecha = DateTime.Now;
-
-            
 
             _context.Gastos.Add(nuevoGasto);
             _context.SaveChanges();
