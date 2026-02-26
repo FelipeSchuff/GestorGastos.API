@@ -20,7 +20,24 @@ namespace GestorGastos.API.Controllers
             var todosLosGastos = _context.Gastos.ToList();
             return Ok(todosLosGastos);
         }
+        // Leer filtrado por Categoría (¡Usando LINQ!)
+        // Le agregamos una ruta extra para que no choque con el GET normal
+        [HttpGet("categoria/{nombreCategoria}")]
+        public IActionResult ObtenerPorCategoria(string nombreCategoria)
+        {
+            // La flecha "=>" se lee como "donde cada gasto (g) cumpla esta condición"
+            var gastosFiltrados = _context.Gastos
+                                          .Where(g => g.Categoria == nombreCategoria)
+                                          .ToList();
 
+            // Si la lista está vacía (Count es 0), devolvemos un 404
+            if (gastosFiltrados.Count == 0)
+            {
+                return NotFound("No tienes gastos registrados en esta categoría.");
+            }
+
+            return Ok(gastosFiltrados);
+        }
         // Crear 
         [HttpPost]
         public IActionResult CrearGasto([FromBody] Gasto nuevoGasto)

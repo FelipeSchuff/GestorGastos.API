@@ -3,19 +3,28 @@ using GestorGastos;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Le decimos a .NET que mantenga esta base de datos lista para quien la pida.
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer("Server=(localdb)\\mssqllocaldb;Database=GestorGastosDB;Trusted_Connection=True;"));
-// Add services to the container.
 
+// EL CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("PermitirTodo", policy =>
+    {
+        policy.AllowAnyOrigin()    // Permite peticiones de cualquier página web
+              .AllowAnyHeader()    // Para usar cualquier tipo de dato
+              .AllowAnyMethod();   // Para usar GET, POST, PUT, DELETE
+    });
+});
+
+// Agrega los servicios por defecto de la API
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Configura el entorno HTTP
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -24,8 +33,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseAuthorization();
+// ACTIVAR EL CORS
+app.UseCors("PermitirTodo");
 
+app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
