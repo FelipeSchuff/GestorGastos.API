@@ -1,5 +1,11 @@
+using Microsoft.EntityFrameworkCore;
+using GestorGastos;
+
 var builder = WebApplication.CreateBuilder(args);
 
+// Le decimos a .NET que mantenga esta base de datos lista para quien la pida.
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer("Server=(localdb)\\mssqllocaldb;Database=GestorGastosDB;Trusted_Connection=True;"));
 // Add services to the container.
 
 builder.Services.AddControllers();

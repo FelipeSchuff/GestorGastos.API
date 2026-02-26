@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using GestorGastos; 
+using GestorGastos;
 
 namespace GestorGastos.API.Controllers
 {
@@ -7,19 +7,18 @@ namespace GestorGastos.API.Controllers
     [ApiController]
     public class GastosController : ControllerBase
     {
-        // Leer
+        private readonly ApplicationDbContext _context;
+
+        public GastosController(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
         [HttpGet]
         public IActionResult ObtenerTodosLosGastos()
         {
-            // Abrimos el puente a la base de datos 
-            using (ApplicationDbContext context = new ApplicationDbContext())
-            {
-                // Traemos todos los gastos
-                var todosLosGastos = context.Gastos.ToList();
-
-                // empaqueta la lista  en formato JSON.
-                return Ok(todosLosGastos);
-            }
+            var todosLosGastos = _context.Gastos.ToList();
+            return Ok(todosLosGastos);
         }
 
         // Crear 
@@ -29,60 +28,58 @@ namespace GestorGastos.API.Controllers
             
             nuevoGasto.Fecha = DateTime.Now;
 
-            using (ApplicationDbContext context = new ApplicationDbContext())
-            {
-                
-                context.Gastos.Add(nuevoGasto);
-                context.SaveChanges();
+            
+
+            _context.Gastos.Add(nuevoGasto);
+            _context.SaveChanges();
 
 
-                // para que el usuario vea qué ID le asignó la base de datosX
-                return Ok(nuevoGasto);
-            }
+            // para que el usuario vea qué ID le asignó la base de datosX
+            return Ok(nuevoGasto);
+            
         }
 
         // Actualizar
         [HttpPut("{id}")]
         public IActionResult EditarGasto(int id, [FromBody] Gasto gastoActualizado)
         {
-            using (ApplicationDbContext context = new ApplicationDbContext())
+     
+            
+            var gastoOriginal = _context.Gastos.Find(id);
+
+            // Si no encuentra el ID, devuelve el famoso Error 404 de internet
+            if (gastoOriginal == null)
             {
-                var gastoOriginal = context.Gastos.Find(id);
-
-                // Si no encuentra el ID, devuelve el famoso Error 404 de internet
-                if (gastoOriginal == null)
-                {
-                    return NotFound();
-                }
-
-                // Si lo encuentra, sobrescribimos los datos
-                gastoOriginal.Descripcion = gastoActualizado.Descripcion;
-                gastoOriginal.Monto = gastoActualizado.Monto;
-                gastoOriginal.Categoria = gastoActualizado.Categoria;
-
-                context.SaveChanges();
-                return Ok(gastoOriginal);
+               return NotFound();
             }
+
+            // Si lo encuentra, sobrescribimos los datos
+            gastoOriginal.Descripcion = gastoActualizado.Descripcion;
+            gastoOriginal.Monto = gastoActualizado.Monto;
+            gastoOriginal.Categoria = gastoActualizado.Categoria;
+
+            _context.SaveChanges();
+            return Ok(gastoOriginal);
+            
         }
 
         // Borrar
         [HttpDelete("{id}")]
         public IActionResult EliminarGasto(int id)
         {
-            using (ApplicationDbContext context = new ApplicationDbContext())
+
+            var gastoAEliminar = _context.Gastos.Find(id);
+
+            if (gastoAEliminar == null)
             {
-                var gastoAEliminar = context.Gastos.Find(id);
-
-                if (gastoAEliminar == null)
-                {
-                    return NotFound();
-                }
-
-                context.Gastos.Remove(gastoAEliminar);
-                context.SaveChanges();
-
-                return Ok("¡Gasto eliminado correctamente de la base de datos!");
+                return NotFound();
             }
+
+            _context.Gastos.Remove(gastoAEliminar);
+            _context.SaveChanges();
+
+            return Ok("¡Gasto eliminado correctamente de la base de datos!");
+            
         }
     }
 }
