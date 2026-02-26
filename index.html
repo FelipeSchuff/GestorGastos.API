@@ -46,8 +46,16 @@
                 .then(datos => {
                     const lista = document.getElementById('lista-gastos');
                     lista.innerHTML = ''; 
+                    
                     datos.forEach(gasto => {
-                        lista.innerHTML += `<li><strong>${gasto.descripcion}</strong>: $${gasto.monto} <br><small>Categoría: ${gasto.categoria}</small></li>`;
+                        lista.innerHTML += 
+                            `<li>
+                                <strong>${gasto.descripcion}</strong>: $${gasto.monto} <br>
+                                <small>Categoría: ${gasto.categoria}</small>
+                                <button style="background-color: #dc3545; padding: 5px 10px; margin-top: 5px; width: auto;" onclick="eliminarGasto(${gasto.id})">
+                                    🗑️ Borrar
+                                </button>
+                            </li>`;
                     });
                     
                     cargarTotal(); 
@@ -100,6 +108,26 @@
                     alert("Hubo un error al guardar.");
                 }
             });
+        }
+        // Eliminar (DELETE) 
+        function eliminarGasto(id) {
+            // Un pequeño popup de seguridad para no borrar por accidente
+            if (confirm("¿Estás seguro de que quieres eliminar este gasto?")) {
+                
+                // Disparamos la paloma mensajera apuntando a la ruta con el ID exacto
+                fetch(`https://localhost:7041/api/Gastos/${id}`, {
+                    method: 'DELETE'
+                })
+                .then(respuesta => {
+                    if(respuesta.ok) {
+                        // Si el backend dice 200 OK, recargamos la lista (y el total se actualiza solo)
+                        obtenerDatos(); 
+                    } else {
+                        alert("No se pudo eliminar el gasto de la base de datos.");
+                    }
+                })
+                .catch(error => console.log("Error al intentar eliminar"));
+            }
         }
     </script>
 

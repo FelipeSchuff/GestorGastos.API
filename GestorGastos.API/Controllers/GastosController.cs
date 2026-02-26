@@ -28,7 +28,7 @@ namespace GestorGastos.API.Controllers
                                           .Where(g => g.Categoria == nombreCategoria)
                                           .ToList();
 
-            // Si la lista está vacía (Count es 0), devolvemos un 404
+            // Si la lista esta vacía (Count es 0), devolvemos un 404
             if (gastosFiltrados.Count == 0)
             {
                 return NotFound("No tienes gastos registrados en esta categoría.");
@@ -62,7 +62,7 @@ namespace GestorGastos.API.Controllers
             _context.SaveChanges();
 
 
-            // para que el usuario vea qué ID le asignó la base de datosX
+            // para que el usuario vea que ID le asigno la base de datosX
             return Ok(nuevoGasto);
             
         }
