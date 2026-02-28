@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using GestorGastos;
+using Microsoft.AspNetCore.Authorization;
 
 namespace GestorGastos.API.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class GastosController : ControllerBase

@@ -7,6 +7,14 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
+        .animacion-suave {
+            animation: aparecer 0.5s ease-out forwards;
+        }
+        @keyframes aparecer {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         body, .card, .btn, .list-group-item, input {
             transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease !important;
         }
@@ -60,11 +68,41 @@
 </head>
 <body class="py-4">
     
-    <div class="container" style="max-width: 600px;">
+<div id="login-pantalla" class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-5">
+                <div class="card p-4 shadow border-0 rounded-4">
+                    <h3 class="text-center mb-4 fw-bold" id="auth-titulo">🔐 Iniciar Sesión</h3>
+                    
+                    <div id="alerta-auth" class="alert d-none text-center" role="alert"></div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Usuario</label>
+                        <input type="text" id="auth-usuario" class="form-control" placeholder="Ingresa tu usuario">
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Contraseña</label>
+                        <input type="password" id="auth-password" class="form-control" placeholder="********">
+                    </div>
+                    
+                    <button id="btn-auth" class="btn btn-marca w-100 fw-bold py-2 mb-3" onclick="procesarAuth()">Entrar al Sistema</button>
+                    
+                    <div class="text-center">
+                        <a href="#" id="link-auth" class="text-decoration-none fw-bold" style="color: var(--color-marca);" onclick="alternarModoAuth()">¿No tienes cuenta? Regístrate aquí</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-principal" class="container d-none" style="max-width: 600px;">
         
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="fw-bold mb-0">💸 Gestor de Gastos</h2>
-            <button class="btn btn-outline-secondary rounded-circle" onclick="alternarTema()" id="btn-tema" title="Cambiar tema">🌙</button>
+            <div>
+                <button class="btn btn-sm btn-outline-danger me-2" onclick="cerrarSesion()" title="Cerrar Sesión">Cerrar Sesión</button>
+                <button class="btn btn-outline-secondary rounded-circle" onclick="alternarTema()" id="btn-tema" title="Cambiar tema">🌙</button>
+            </div>
         </div>
 
         <div class="caja-total text-center mb-4">
@@ -82,7 +120,8 @@
         <div class="card shadow-sm mb-4 border-0">
             <div class="card-body p-4">
                 <h5 class="fw-bold mb-3">Nuevo Movimiento</h5>
-                
+                <div id="alerta-errores" class="alert alert-danger d-none" role="alert">
+                </div>
                 <div class="row g-2 mb-3">
                     <div class="col-md-8">
                         <input type="text" id="desc" class="form-control" placeholder="Descripción (Ej: Steam, Almuerzo...)">
@@ -112,7 +151,7 @@
         </div>
         
         <ul id="lista-gastos" class="list-group shadow-sm mb-5">
-            </ul>
+        </ul>
 
     </div>
 
@@ -147,12 +186,107 @@
         // --- VARIABLES GLOBALES ---
         let listaGastosGlobal = []; 
         let gastoEnEdicionId = null; 
-        let miGraficoVisual = null; // Memoria para guardar el gráfico actual
+        let miGraficoVisual = null; 
 
-        // --- LOGICA DE LA API ---
+
+        // SISTEMA DE SEGURIDAD (LOGIN Y TOKENS)
+        
+        // Esta función agarra el Token guardado y se lo pega a las peticiones
+        function getAuthHeaders() {
+            const token = localStorage.getItem('miTokenVIP');
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            };
+        }
+
+       let modoRegistro = false; // Controla si estamos en la pantalla de login o de registro
+
+        function alternarModoAuth(ocultarAlerta = true) {
+            modoRegistro = !modoRegistro; 
+            document.getElementById('auth-titulo').innerText = modoRegistro ? '📝 Crear Cuenta' : '🔐 Iniciar Sesión';
+            document.getElementById('btn-auth').innerText = modoRegistro ? 'Registrarme' : 'Entrar al Sistema';
+            document.getElementById('btn-auth').className = modoRegistro ? 'btn btn-success w-100 fw-bold py-2 mb-3' : 'btn btn-marca w-100 fw-bold py-2 mb-3';
+            document.getElementById('link-auth').innerText = modoRegistro ? '¿Ya tienes cuenta? Inicia sesión aquí' : '¿No tienes cuenta? Regístrate aquí';
+            
+
+            if(ocultarAlerta) {
+                document.getElementById('alerta-auth').classList.add('d-none'); 
+            }
+        }
+
+        async function procesarAuth() {
+            const usuario = document.getElementById('auth-usuario').value;
+            const password = document.getElementById('auth-password').value;
+            const alerta = document.getElementById('alerta-auth');
+            
+            const endpoint = modoRegistro ? 'registrar' : 'login'; 
+
+            try {
+                const respuesta = await fetch(`https://localhost:7041/api/Auth/${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nombreUsuario: usuario, password: password })
+                });
+
+                if (respuesta.ok) {
+                    if (modoRegistro) {
+                        alerta.className = 'alert alert-success text-center animacion-suave';
+                        alerta.innerText = '¡Cuenta creada con éxito! Ahora puedes iniciar sesión.';
+                        alerta.classList.remove('d-none');
+                        
+
+                        alternarModoAuth(false); 
+                        document.getElementById('auth-password').value = ''; 
+                    } else {
+                        const datos = await respuesta.json();
+                        localStorage.setItem('miTokenVIP', datos.token); 
+                        mostrarApp();
+                    }
+                } else {
+                    const mensajeError = await respuesta.text(); 
+                    alerta.className = 'alert alert-danger text-center animacion-suave';
+                    alerta.innerText = modoRegistro ? mensajeError : "Usuario o contraseña incorrectos 🛑";
+                    alerta.classList.remove('d-none');
+                }
+            } catch (error) {
+                alerta.className = 'alert alert-danger text-center animacion-suave';
+                alerta.innerText = "Error conectando con el servidor.";
+                alerta.classList.remove('d-none');
+            }
+        }
+
+        function cerrarSesion() {
+            localStorage.removeItem('miTokenVIP'); 
+            document.getElementById('app-principal').classList.add('d-none');
+            
+            const login = document.getElementById('login-pantalla');
+            login.classList.remove('d-none');
+            login.classList.add('animacion-suave'); 
+            
+            // Limpiamos los campos por seguridad
+            document.getElementById('auth-usuario').value = '';
+            document.getElementById('auth-password').value = '';
+            document.getElementById('alerta-auth').classList.add('d-none');
+        }
+
+        function mostrarApp() {
+            document.getElementById('login-pantalla').classList.add('d-none');
+            
+            const app = document.getElementById('app-principal');
+            app.classList.remove('d-none');
+            app.classList.add('animacion-suave'); 
+            
+            obtenerDatos(); 
+        }
+
+        // LOGICA DE LA API (AHORA SEGURA)
         function obtenerDatos() {
-            fetch('https://localhost:7041/api/Gastos')
-                .then(respuesta => respuesta.json())
+            fetch('https://localhost:7041/api/Gastos', { headers: getAuthHeaders() })
+                .then(respuesta => {
+                    if(respuesta.status === 401) { cerrarSesion(); throw new Error("Sesión expirada"); }
+                    return respuesta.json();
+                })
                 .then(datos => {
                     listaGastosGlobal = datos; 
                     const lista = document.getElementById('lista-gastos');
@@ -175,13 +309,13 @@
                     });
                     
                     cargarTotal(); 
-                    actualizarGrafico(); // ¡Llamamos a pintar el gráfico apenas llegan los datos!
+                    actualizarGrafico(); 
                 })
-                .catch(error => console.log("Error conectando con la API"));
+                .catch(error => console.log(error));
         }
 
         function cargarTotal() {
-            fetch('https://localhost:7041/api/Gastos/total')
+            fetch('https://localhost:7041/api/Gastos/total', { headers: getAuthHeaders() })
                 .then(respuesta => respuesta.json())
                 .then(datos => {
                     document.getElementById('balance').innerText = datos.total;
@@ -190,29 +324,18 @@
 
         // --- LOGICA DEL GRAFICO ---
         function actualizarGrafico() {
-            // Matematicas: Agrupar los gastos por categoría
             const totalesPorCategoria = {};
             listaGastosGlobal.forEach(gasto => {
-                // Si la categoría aun no existe en nuestro diccionario, la creamos en 0
-                if (!totalesPorCategoria[gasto.categoria]) {
-                    totalesPorCategoria[gasto.categoria] = 0;
-                }
-                // Le sumamos el monto
+                if (!totalesPorCategoria[gasto.categoria]) { totalesPorCategoria[gasto.categoria] = 0; }
                 totalesPorCategoria[gasto.categoria] += gasto.monto;
             });
 
-            // Separar los nombres de las categorías y los numeros para el gráfico
-            const etiquetas = Object.keys(totalesPorCategoria); // Ej: ["Inversion", "Comida"]
-            const valores = Object.values(totalesPorCategoria); // Ej: [12000, 2600]
+            const etiquetas = Object.keys(totalesPorCategoria); 
+            const valores = Object.values(totalesPorCategoria); 
 
-            // Pintar el gráfico
             const ctx = document.getElementById('graficoGastos').getContext('2d');
-            
-            if (miGraficoVisual !== null) {
-                miGraficoVisual.destroy();
-            }
+            if (miGraficoVisual !== null) { miGraficoVisual.destroy(); }
 
-            // Creamos el nuevo gráfico
             miGraficoVisual = new Chart(ctx, {
                 type: 'doughnut', 
                 data: {
@@ -223,16 +346,11 @@
                         borderWidth: 0
                     }]
                 },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: { position: 'bottom' } 
-                    }
-                }
+                options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
             });
         }
 
-        // --- LOGICA DE EDICION ---
+        // --- LOGICA DE EDICION Y GUARDADO ---
         function prepararEdicion(id) {
             const gasto = listaGastosGlobal.find(g => g.id === id);
             document.getElementById('desc').value = gasto.descripcion;
@@ -282,38 +400,58 @@
             if (gastoEnEdicionId === null) {
                 fetch('https://localhost:7041/api/Gastos', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getAuthHeaders(), 
                     body: JSON.stringify(payload) 
                 }).then(respuesta => procesarRespuesta(respuesta));
             } else {
                 payload.id = gastoEnEdicionId; 
                 fetch(`https://localhost:7041/api/Gastos/${gastoEnEdicionId}`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getAuthHeaders(), 
                     body: JSON.stringify(payload) 
                 }).then(respuesta => procesarRespuesta(respuesta));
             }
         }
 
-        function procesarRespuesta(respuesta) {
+        async function procesarRespuesta(respuesta) {
+            const alertaErrores = document.getElementById('alerta-errores');
+
             if(respuesta.ok) {
+                alertaErrores.classList.add('d-none'); 
                 cancelarEdicion(); 
                 obtenerDatos(); 
             } else {
-                alert("Por favor, revisa que los datos sean correctos.");
+                const datosError = await respuesta.json();
+                let textoErrores = "<strong>¡Fuego amigo! Corrige lo siguiente:</strong><br><ul class='mb-0'>";
+                if (datosError.errors) {
+                    for (let campo in datosError.errors) {
+                        textoErrores += `<li>${datosError.errors[campo][0]}</li>`;
+                    }
+                } else {
+                    textoErrores += "<li>Revisa que los datos no estén vacíos o sean incorrectos.</li>";
+                }
+                textoErrores += "</ul>";
+                alertaErrores.innerHTML = textoErrores;
+                alertaErrores.classList.remove('d-none');
             }
         }
 
         function eliminarGasto(id) {
             if (confirm("¿Estás seguro de que quieres eliminar este registro?")) {
-                fetch(`https://localhost:7041/api/Gastos/${id}`, { method: 'DELETE' })
+                fetch(`https://localhost:7041/api/Gastos/${id}`, { 
+                    method: 'DELETE',
+                    headers: getAuthHeaders() 
+                })
                 .then(respuesta => {
                     if(respuesta.ok) { obtenerDatos(); } 
                 });
             }
         }
 
-        obtenerDatos(); 
+        if (localStorage.getItem('miTokenVIP')) {
+            mostrarApp();
+        }
+
     </script>
 </body>
 </html>

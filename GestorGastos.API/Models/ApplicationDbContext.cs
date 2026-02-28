@@ -9,6 +9,7 @@ namespace GestorGastos
         {
         }
         public DbSet<Gasto> Gastos { get; set; }
+        public DbSet<Usuario> Usuarios { get; set; } 
 
     }
 }
